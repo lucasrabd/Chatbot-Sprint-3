@@ -19,9 +19,9 @@ def pergunta():
 @app.route('/sugestoes', methods=['POST'])
 def sugestoes():
     data = request.get_json()
-    user_input = data.get('user_input')
-    suggestions = chatbot.sugerir_perguntas(user_input)
-    return jsonify({"suggestions": suggestions})
+    texto = data.get('texto', '')
+    sugestoes = chatbot.sugerir_perguntas(texto)
+    return jsonify({"sugestoes": sugestoes})
 
 if __name__ == '__main__':
     app.run(debug=True)

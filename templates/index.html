@@ -3,78 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Profissional</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <title>Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .chat-container {
+            background-color: white;
+            width: 500px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #chatbox {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+        }
+        .user-message {
+            text-align: right;
+        }
+        .chat-bubble {
+            display: inline-block;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            max-width: 80%;
+        }
+        .user-bubble {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+        }
+        .bot-bubble {
+            background-color: #f1f1f1;
+            align-self: flex-start;
+        }
+        #suggestions {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #suggestions li {
+            padding: 10px;
+            border-radius: 10px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+        #suggestions li:hover {
+            background-color: #0056b3;
+        }
+        #questionInput {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div id="chatbox" class="chatbox"></div>
-        <div id="inputBox" class="input-box">
-            <input type="text" id="userInput" class="input-text" placeholder="Digite sua pergunta..." oninput="getSuggestions()">
-            <ul id="suggestions" class="suggestions"></ul>
-            <button class="send-button" onclick="sendMessage()">Enviar</button>
-        </div>
+    <div class="chat-container">
+        <h1>Chatbot</h1>
+        <div id="chatbox"></div>
+        <input type="text" id="questionInput" placeholder="Digite sua pergunta..." onkeyup="getSuggestions()">
+        <ul id="suggestions"></ul>
+        <button onclick="askQuestion()">Enviar</button>
     </div>
 
     <script>
-        function addMessage(message, sender) {
+        function addMessageToChatbox(message, sender) {
             const chatbox = document.getElementById('chatbox');
-            const messageElement = document.createElement('div');
-            messageElement.className = 'message ' + sender;
-            messageElement.innerHTML = message;
-            chatbox.appendChild(messageElement);
-            chatbox.scrollTop = chatbox.scrollHeight;
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-message');
+            
+            const bubble = document.createElement('div');
+            bubble.classList.add('chat-bubble');
+            bubble.textContent = message;
+
+            if (sender === 'user') {
+                bubble.classList.add('user-bubble');
+                messageDiv.classList.add('user-message');
+            } else {
+                bubble.classList.add('bot-bubble');
+            }
+
+            messageDiv.appendChild(bubble);
+            chatbox.appendChild(messageDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;  // Scroll para a última mensagem
         }
 
         function getSuggestions() {
-            const inputBox = document.getElementById('userInput');
-            const userInput = inputBox.value;
-            if (userInput.trim() !== '') {
+            const texto = document.getElementById('questionInput').value;
+
+            if (texto.length > 0) {
                 fetch('/sugestoes', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({user_input: userInput})
+                    body: JSON.stringify({ texto: texto }),
                 })
                 .then(response => response.json())
                 .then(data => {
-                    const suggestionsBox = document.getElementById('suggestions');
-                    suggestionsBox.innerHTML = '';
-                    data.suggestions.forEach(suggestion => {
+                    const suggestionsList = document.getElementById('suggestions');
+                    suggestionsList.innerHTML = '';
+
+                    data.sugestoes.forEach(suggestion => {
                         const li = document.createElement('li');
-                        li.innerText = suggestion;
-                        li.onclick = () => {
-                            inputBox.value = suggestion;
-                            suggestionsBox.innerHTML = '';
+                        li.textContent = suggestion;
+                        li.onclick = function() {
+                            document.getElementById('questionInput').value = suggestion;
+                            suggestionsList.innerHTML = '';  // Limpa as sugestões após selecionar uma
                         };
-                        suggestionsBox.appendChild(li);
+                        suggestionsList.appendChild(li);
                     });
                 });
+            } else {
+                document.getElementById('suggestions').innerHTML = '';  // Limpa as sugestões quando o campo de entrada está vazio
             }
         }
 
-        function sendMessage() {
-            const inputBox = document.getElementById('userInput');
-            const userMessage = inputBox.value;
-            if (userMessage.trim() !== '') {
-                addMessage(`<strong>Você:</strong> ${userMessage}`, 'user');
-                fetch('/pergunta', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({question: userMessage})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    addMessage(`<strong>Bot:</strong> ${data.response}`, 'bot');
-                })
-                .catch(error => {
-                    console.error('Erro:', error);
-                });
-                inputBox.value = '';
-            }
+        function askQuestion() {
+            const question = document.getElementById('questionInput').value;
+
+            // Adicionar a pergunta do usuário ao chat
+            addMessageToChatbox(question, 'user');
+            document.getElementById('questionInput').value = '';  // Limpa o campo de texto
+            document.getElementById('suggestions').innerHTML = '';  // Limpa as sugestões
+
+            fetch('/pergunta', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ question: question }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Adicionar a resposta do bot ao chat
+                addMessageToChatbox(data.response, 'bot');
+            });
         }
     </script>
 </body>
